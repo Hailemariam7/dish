@@ -1,31 +1,32 @@
-import User from "../models/user.model.js";
-import createError from "../utils/createError.js";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import User from "../models/user.model.js"
+import createError from "../utils/createError.js"
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
 
 export const register = async (req, res, next) => {
   try {
-    const hash = bcrypt.hashSync(req.body.password, 5);
+    const hash = bcrypt.hashSync(req.body.password, 5)
     const newUser = new User({
       ...req.body,
       password: hash,
-    });
+    })
 
-    await newUser.save();
-    res.status(201).send("User has been created.");
+    await newUser.save()
+    res.status(201).send("User has been created.")
   } catch (err) {
-    next(err);
+    next(err)
   }
-};
+}
 export const login = async (req, res, next) => {
   try {
-    const user = await User.findOne({ username: req.body.username });
+    const user = await User.findOne({
+      $or: [{ email: req.body.identifier }, { phone: req.body.identifier }],
+    })
 
-    if (!user) return next(createError(404, "User not found!"));
+    if (!user) return next(createError(404, "User not found!"))
 
-    const isCorrect = bcrypt.compareSync(req.body.password, user.password);
-    if (!isCorrect)
-      return next(createError(400, "Wrong password or username!"));
+    const isCorrect = bcrypt.compareSync(req.body.password, user.password)
+    if (!isCorrect) return next(createError(400, "Wrong password or username!"))
 
     const token = jwt.sign(
       {
@@ -33,19 +34,19 @@ export const login = async (req, res, next) => {
         isSeller: user.isSeller,
       },
       process.env.JWT_KEY
-    );
+    )
 
-    const { password, ...info } = user._doc;
+    const { password, ...info } = user._doc
     res
       .cookie("accessToken", token, {
         httpOnly: true,
       })
       .status(200)
-      .send(info);
+      .send(info)
   } catch (err) {
-    next(err);
+    next(err)
   }
-};
+}
 
 export const logout = async (req, res) => {
   res
@@ -54,5 +55,5 @@ export const logout = async (req, res) => {
       secure: true,
     })
     .status(200)
-    .send("User has been logged out.");
-};
+    .send("User has been logged out.")
+}
